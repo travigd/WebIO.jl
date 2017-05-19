@@ -59,7 +59,7 @@ On Blink, pass the object returned by `dom""` to `body!` of a window or page. Th
 
 ![](assets/images/helloworld-ijulia.png)
 
-In Mux use the following code
+WebIO can be used with Mux with the following code
 
 ```
 using WebIO
@@ -68,54 +68,20 @@ using Mux
 WebIO.setup()
 
 function myapp(req)
-    Node(:div, "Hello, World!")
+    dom"div"("Hello, World!")
 end
 
 webio_serve(page("/", req -> myapp(req)))
 ```
 
-will start to serve the page at port 8000
+This will serve a page at port 8000 that will render the object returned by `myapp` function.
 
-Introduction
-------------
-
-The rest of the document describes the WebIO API. To illustrate the various affordances of WebIO, we will use a Todo list app as a running example.
-
-Presumably, a todo item would need to store at least two fields: a `discription`, and a boolean `done` indicating whether the task is completed or not.
-
-```julia
-immutable TodoItem
-    description::String
-    done::Bool
-end
-```
-
-A todo list would naturally contain a vector of `TodoItem`s and possibly a `title` field.
-
-```julia
-immutable TodoList
-    title::String
-    list::Vector{TodoItem}
-end
-```
-
-The `TodoItem` and `TodoList` types together can represent the state of our todo app. For example,
-
-```julia
-mylist = TodoList("My todo list",
-    [TodoItem("Make my first WebIO widget", false),
-     TodoItem("Make a pie", false)])
-
-```
-
-In web framework jargon the these types together would be called the `Model` (as in [Model-View-Controller](https://en.wikipedia.org/wiki/Model_view_controller)) of the app.
-
-Let's start building the pieces we require for a todo list UI using WebIO.
+On Atom, when you execute an expression that returns a WebIO object, it will be rendered in a separate pane.
 
 An introduction to the DOM
 --------------------------
 
-We need a way to convert our app state to something a web browser can render. For this purpose WebIO lets you create the [DOM](https://developer.mozilla.org/en-US/docs/Web/API/Document_Object_Model/Introduction) of the output. DOM stands for "Document Object Model", you can think of the DOM as an intermediate structure that represents the underlying HTML. So for example,
+To create UIs with WebIO, we need to create something called [DOM](https://developer.mozilla.org/en-US/docs/Web/API/Document_Object_Model/Introduction) objects. DOM stands for "Document Object Model", you can think of the DOM as an intermediate structure that represents the underlying HTML. So for example,
 
 ```html
 <div class="myDiv" id="myId">
@@ -129,9 +95,9 @@ would be represented as:
 Node(:div, "Hello, World!", className="myDiv", id="myId")
 ```
 
-WebIO can then render this DOM `Node` object in different interfaces. (See setting up display section above to learn how to set up WebIO to display things)
+In the DOM. This is of course, a virtual representation of the DOM in Julia. WebIO can take care of rendering that to the actual DOM inside a browser-based interface. (See setting up display section above to learn how to set up WebIO to display things)
 
-Notice that in the HTML we used the `class` attribute, but we used `className` keyword argument while creating `Node`. This is due to 2 reasons:
+Notice that in the HTML we used the `class` attribute, but we used `className` keyword argument while creating `Node`. This is because the DOM doesn't always closely resemble the HTML.
 
 1. Keywords to `Node` are *properties*
 2. Properties are [sometimes different from HTML *attributes*](http://stackoverflow.com/questions/258469/what-is-the-difference-between-attribute-and-property)
@@ -166,15 +132,50 @@ Node(:div, children..., className="<class>", id="<id>",
 
 Everything except the tag ('div' in the example) is optional. So,
 
-`dom"div"`, `dom"div.class1"`, `dom"div.class1.class2"`, `dom"div#my-id`,
-`dom"input.check[type=checkbox]"` are all valid invocations.
+`dom"div"`, `dom"div.class1"`, `dom"div.class1.class2"`, `dom"div#my-id`, `dom"input.check[type=checkbox]"` are all valid invocations.
+
+Todo list example
+-----------------
+
+The rest of the document describes the WebIO API. To illustrate the various affordances of WebIO, we will create a Todo list app as a running example.
+
+Presumably, a todo item would need to store at least two fields: a `discription`, and a boolean `done` indicating whether the task is completed or not.
+
+```julia
+immutable TodoItem
+    description::String
+    done::Bool
+end
+```
+
+A todo list would naturally contain a vector of `TodoItem`s and possibly a `title` field.
+
+```julia
+immutable TodoList
+    title::String
+    list::Vector{TodoItem}
+end
+```
+
+The `TodoItem` and `TodoList` types together can represent the state of our todo app. For example,
+
+```julia
+mylist = TodoList("My todo list",
+    [TodoItem("Make my first WebIO widget", false),
+     TodoItem("Make a pie", false)])
+
+```
+
+In web framework jargon the these types together would be called the `Model` (as in [Model-View-Controller](https://en.wikipedia.org/wiki/Model_view_controller)) of the app.
+
+Let's start building the pieces we require for a todo list UI using WebIO.
+
 
 ### Showing a todo item
 
 Let's come back to our example of creating a todo list app with our newfound knowledge of how to create some output with WebIO.
 
-
-WebIO defines a `render` generic function. The purpose of `render` is to define how any Julia object can be rendered to something WebIO can display. Hence, we should define how elements of our Todo app are rendered by adding [methods](http://docs.julialang.org/en/release-0.4/manual/methods/) to `render`. First, the TodoItem:
+WebIO defines a `render` generic function. The purpose of `render` is to define how any Julia object can be rendered to something WebIO can display. Hence, we should define how elements of our Todo app are rendered by adding [methods](http://docs.julialang.org/en/release-0.5/manual/methods/) to `render`. First, the TodoItem:
 
 ```julia
 import WebIO.render
@@ -231,8 +232,7 @@ You can set the `events` property to a Dict mapping event names to JavaScript fu
 For example,
 
 ```julia
-Node(
-    :div, "show my messages",
+dom"div"("show my messages",
     events=Dict(
       "click" => "function () { alert('Nice, you have no messages.'); }"
     )
