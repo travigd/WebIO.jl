@@ -323,7 +323,7 @@ w(div"button"(
 ))
 ```
 
-Notice the last expression actually _calls_ the widget `w` with the contents to display. This is because widget `w` itself is not displayable, it is just a context for communication. All uses of observables associated with `w` (e.g. `obs`) should be enclosed in the widget `w`.
+Notice the last expression actually _calls_ the widget `w` with the contents to display. This is because widget `w` itself is not displayable, it is just a context for communication. Calling it with some content will display the content and set up the required communication channels. All uses of observables associated with `w` (e.g. `obs`) should be enclosed in the widget `w`.
 
 
 ## CommandSets
