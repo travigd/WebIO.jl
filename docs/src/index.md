@@ -38,7 +38,7 @@ This should create a file called `webio.bundle.js` under the `assets/` directory
 
 _These steps will be optional once WebIO is released and will only be required when hacking on WebIO._
 
-We plan to move this system to the build step once [julia#20082](https://github.com/JuliaLang/julia/issues/20082) in some form.
+We plan to move this system to the build step once [julia#20082](https://github.com/JuliaLang/julia/issues/20082) is available in some form.
 
 ### Hello, World!: Getting things to display
 
@@ -59,7 +59,22 @@ On Blink, pass the object returned by `dom""` to `body!` of a window or page. Th
 
 ![](assets/images/helloworld-ijulia.png)
 
-In Mux use the following code:
+In Mux use the following code
+
+```
+using WebIO
+using Mux
+
+WebIO.setup()
+
+function myapp(req)
+    Node(:div, "Hello, World!")
+end
+
+webio_serve(page("/", req -> myapp(req)))
+```
+
+will start to serve the page at port 8000
 
 Introduction
 ------------
