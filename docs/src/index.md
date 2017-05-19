@@ -282,8 +282,49 @@ Below, we will use this to start making the todo app interactive and useful.
 
 ## Widgets and communication
 
+To create DOM elements which can interact with Julia, we will need a Widget object.
+
 ```julia
+w = Widget()
 ```
+
+A widget object acts as a container for communication. To exchange values between JavaScript and Julia, we also need to add `Observable` objects to the widget. This can be done by passing the widget, and an identifier for the observable (as string) and a default value to the `Observable` constructor:
+
+```julia
+obs = Observable(w, "rand-value", 0.0)
+```
+
+You can get the value of `obs` with the syntax `obs[]`. You can set the value using the syntax `obs[] = val`. To listen to changes to the value you can use the `on` function.
+
+```julia
+on(f, obs)
+```
+
+This will run `f` on every update to `obs`.
+
+To update the observable from the javascript side, you can interpolate it within `@js` expressions.
+
+```julia
+@js () -> $obs[] = Math.random()
+```
+
+To sum up, here is a widget that prints a random number obtained from javascript everytime a button is clicked:
+
+```julia
+w = Widget()
+obs = Observable(w, "rand-value", 0.0)
+on(obs) do x
+    println("JS sent $x")
+end
+
+w(div"button"(
+    "generate random",
+    events=Dict("click"=>@js () -> $obs[] = Math.random())
+))
+```
+
+Notice the last expression actually _calls_ the widget `w` with the contents to display. This is because widget `w` itself is not displayable, it is just a context for communication. All uses of observables associated with `w` (e.g. `obs`) should be enclosed in the widget `w`.
+
 
 ## CommandSets
 
