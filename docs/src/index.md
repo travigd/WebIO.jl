@@ -227,73 +227,62 @@ render(mylist)
 
 ## Setting up event handlers
 
-You can set the `events` property to a Dict mapping event names to JavaScript function (in a String).
+To interact with the DOM objects we create, we need to add "event handlers" to them. Each event has its own name, and the handler itself is a function written in JavaScript. We can assign event handlers to a DOM node using the `events` property. This property must be set to a `Dict` where the keys denote the event name and the values are JavaScript function expressions.
 
-For example,
+There are 2 ways of creating JavaScript expressions with WebIO.
+
+First, you can use the `js""` string macro to just write any JavaScript as a string. For example
+
+```
+js"""
+alert("hello, world!")
+"""
+```
+
+This will return an object of type `JSExpr` which can be used anywhere WebIO expects javascript expressions.
+
+The second way is to use the `@js` macro. `@js` macro can translate Julia expressions to JavaScript expressions (`JSExpr`). For example,
+
+```
+@js alert("hello, world!")
+```
+or
+
+```
+@js Math.rand()
+```
+
+Note that this is just a translation and not compilation. The variables and functions you reference in a `@js` function must be defined in the JavaScript context it will run in (and need not be defined in Julia).
+
+So, to sum it up, here are the 2 ways you can add an event listener:
 
 ```julia
 dom"div"("show my messages",
     events=Dict(
-      "click" => "function () { alert('Nice, you have no messages.'); }"
+      "click" => js"""
+        function () {
+          alert("Nice, you have no messages.");
+        }
+      """
     )
 )
 ```
 
-## Context and communication
-
-You can communicate between Julia and JavaScript by creating a `Context` object. Think of it as the mailbox for a subtree of a DOM, it can receive and send "commands". In the example below, we will create a counter which can be incremented and decremented. The changes to the count happen on the Julia side - this is of course an overkill and could have been done all on the JavaScript side, but imagine you are also saving the count to a database or a file on the server - you'd need the events to come to Julia and go back to the browser. Although simplistic, this example demonstrates a handful of features of Contexts.
+or
 
 ```julia
-
-function counter(count=0)
-  withcontext(Context()) do ctx
-    # ctx is the Context object
-
-    # handle!(context, command_name) - add a handler for a command coming from JavaScript
-
-    handle!(ctx, :change) do d
-        send(ctx, :set_count, count+=d)
-    end
-
-    # handlejs!(ctx, command_name, function_string) - add a handler for a command coming in from the Julia side
-    # in this case we access the element with the id "count" from ctx.dom, and set its contents to the new count
-
-    handlejs!(ctx, :set_count, "function (ctx,msg) {ctx.dom.querySelector('#count').textContent = msg}")
-
-    # the btn function defined below takes a label and a change value and creates a button which
-    # when clicked, asks julia to change the counter by the given change value by sending the "change" command
-    # recall that we have added the handler for :change using `handle` above.
-
-    btn(label, change) = Node(:button, label,
-            events=Dict(
-                # an event handler on Javascript always gets two arguments: the event and the context
-                # event is object passed by JavaScript into the event handler, and context is the context
-                # using which you can talk to julia or access and modify contents of the context (context.dom as seen above)
-                "click"=>"function (event,ctx) { WebIO.send(ctx, 'change', $change) }"
-            )
-        )
-
-    # This function should return the DOM object that is watched over by the context
-    # for relaying messages.
-
-    Node(:div,
-        btn("increment", 1),
-        btn("decrement", -1),
-        Node(:div, string(count), id="count"),
+dom"div"("show my messages",
+    events=Dict(
+      "click" => @js () -> alert("Nice, you have no messages.")
     )
-  end
-end
-
-counter(1)
-
+)
 ```
 
-You can also create many counters, each with its own state:
+Below, we will use this to start making the todo app interactive and useful.
+
+## Widgets and communication
 
 ```julia
-Node(:div,
-  map(counter, [1,2,3,4])
-)
 ```
 
 ## CommandSets
