@@ -300,31 +300,83 @@ You can get the value of `obs` with the syntax `obs[]`. You can set the value us
 on(f, obs)
 ```
 
-This will run `f` on every update to `obs`.
+This will run `f` on every update to `obs`. More on using Observables for communication:
 
-To update the observable from the javascript side, you can interpolate it within `@js` expressions.
+### Sending values from JavaScript to Julia
+
+We will present a widget which communicates with Julia first and then explain its construction line-by-line. The following widget contains a button which sends a random number to Julia. We will print this number on the Julia side.
 
 ```julia
-@js () -> $obs[] = Math.random()
+function random_print_button()
+    w = Widget()
+
+    obs = Observable(w, "rand-value", 0.0)
+
+    on(obs) do x
+        println("JS sent $x")
+    end
+
+    w(
+      div"button"(
+        "generate random",
+        events=Dict("click"=>@js () -> $obs[] = Math.random()),
+      ),
+    )
+end
 ```
 
-To sum up, here is a widget that prints a random number obtained from javascript everytime a button is clicked:
+`w` is a Widget object, it acts a scope or context for communication. every call to `random_print_button` will create a new widget and hence keep the updates contained within it. This allows there to be many instances of the same widget on a page.
+
+An `Observable` is a value that can change over time. `Observable(w, "rand-value", 0.0)` creates an observable by the name "rand-value" associated with widget `w`. `on(f, x)` setes up an event handler such that `f` is called with the value of `x` every time `x` is updated.
+
+An observable can be updated using the `x[] = value` syntax on Julia. To update the observable from the JavaScript side, you can use the following syntax:
+
+```julia
+@js $obs[] = Math.random()
+```
+
+This will return a `JSExpr` which you can use anywhere WebIO expects JavaScript, such as a event handler. But an even handler should be a function so you would need to enclose this in a function: `@js () -> $obs[] = Math.random()`.
+
+```
+  div"button"(
+    "generate random",
+    events=Dict("click"=>@js () -> $obs[] = Math.random()),
+  )
+```
+creates a button UI which updates the `obs` observable with `Math.random()` (executed on JS) on every click.
+
+Notice the last expression actually _calls_ the widget `w` with the contents to display. This causes the contents to be _wrapped_ in `w`'s context. All uses of observables associated with `w` (e.g. `obs`) should be enclosed in the widget `w`.
+
+### Sending values from Julia to JavaScript
+
+Here's a clock where the time is formatted and updated every second from Julia. We use the `onjs` handler and mutate the `#clock` DOM element to acheive this.
 
 ```julia
 w = Widget()
-obs = Observable(w, "rand-value", 0.0)
-on(obs) do x
-    println("JS sent $x")
+obs = Observable(w, "clock-value", "")
+
+timestr() = Dates.format(now(), "HH:MM:SS")
+
+# update timestamp every second
+@async while true
+    sleep(1)
+    obs[] = timestr()
 end
 
-w(div"button"(
-    "generate random",
-    events=Dict("click"=>@js () -> $obs[] = Math.random())
-))
+# on every update to `obs`, replace the text content of #clock
+onjs(obs, @js (wid, val) -> begin
+    @var clock = wid.dom.querySelector("#clock")
+    clock.textContent = val
+end)
+
+w(
+  div"div#clock"(
+    timestr(),
+  ),
+)
 ```
 
-Notice the last expression actually _calls_ the widget `w` with the contents to display. This is because widget `w` itself is not displayable, it is just a context for communication. Calling it with some content will display the content and set up the required communication channels. All uses of observables associated with `w` (e.g. `obs`) should be enclosed in the widget `w`.
-
+The javascript function passed to `onjs` gets 2 arguments: 1) the `Widget` object (`wid`) 2) The value of the update. Notice the use of `wid.dom.querySelector("#clock")`. `wid.dom` contains the rendered DOM of the widget. `querySelector("#<id>"` will look up the element which has the id `<id>`. `clock.textContent = val` will set the text contained in `clock`, the DOM element.
 
 ## CommandSets
 
