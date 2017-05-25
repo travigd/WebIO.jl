@@ -317,7 +317,7 @@ function random_print_button()
     end
 
     w(
-      div"button"(
+      dom"button"(
         "generate random",
         events=Dict("click"=>@js () -> $obs[] = Math.random()),
       ),
@@ -338,7 +338,7 @@ An observable can be updated using the `x[] = value` syntax on Julia. To update 
 This will return a `JSExpr` which you can use anywhere WebIO expects JavaScript, such as a event handler. But an even handler should be a function so you would need to enclose this in a function: `@js () -> $obs[] = Math.random()`.
 
 ```
-  div"button"(
+  dom"button"(
     "generate random",
     events=Dict("click"=>@js () -> $obs[] = Math.random()),
   )
@@ -370,7 +370,7 @@ onjs(obs, @js (wid, val) -> begin
 end)
 
 w(
-  div"div#clock"(
+  dom"div#clock"(
     timestr(),
   ),
 )
