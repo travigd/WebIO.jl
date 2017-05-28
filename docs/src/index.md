@@ -33,6 +33,7 @@ This will download and install [`yarn`](https://yarnpkg.com/) and then the depen
 ```julia
 WebIO.bundlejs(watch=false)
 ```
+(You can ignore this error when running the above: `Module not found: Error: Can't resolve 'fs'`. [Issue here](https://github.com/JuliaGizmos/WebIO.jl/issues/12))
 
 This should create a file called `webio.bundle.js` under the `assets/` directory. `watch=true` starts a webpack server which watches for changes to the javascript files under `assets/` and recompiles them automatically. This is very useful as you incrementally make changes to the Javascript files.
 
@@ -99,7 +100,7 @@ In the DOM. This is of course, a virtual representation of the DOM in Julia. Web
 
 Notice that in the HTML we used the `class` attribute, but we used `className` keyword argument while creating `Node`. This is because the DOM doesn't always closely resemble the HTML.
 
-1. Keywords to `Node` are *properties*
+1. Keywords to `Node` are DOM *properties*
 2. Properties are [sometimes different from HTML *attributes*](http://stackoverflow.com/questions/258469/what-is-the-difference-between-attribute-and-property)
 
 Specifically, here, the `class` attribute reflects as the `className` property of the DOM, hence we set it thus. To explicitly set an attribute instead of a property, pass in the attributes keyword argument. It must be set to the Dict of attribute-value pairs.
@@ -139,7 +140,7 @@ Todo list example
 
 The rest of the document describes the WebIO API. To illustrate the various affordances of WebIO, we will create a Todo list app as a running example.
 
-Presumably, a todo item would need to store at least two fields: a `discription`, and a boolean `done` indicating whether the task is completed or not.
+Presumably, a todo item would need to store at least two fields: a `description`, and a boolean `done` indicating whether the task is completed or not.
 
 ```julia
 immutable TodoItem
@@ -254,7 +255,7 @@ or
 
 Note that this is just a translation and not compilation. The variables and functions you reference in a `@js` function must be defined in the JavaScript context it will run in (and need not be defined in Julia).
 
-So, to sum it up, here are the 2 ways you can add an event listener:
+So, to sum it up, here are the two ways you can add an event listener:
 
 ```julia
 dom"div"("show my messages",
@@ -288,7 +289,7 @@ To create DOM elements which can interact with Julia, we will need a Widget obje
 w = Widget()
 ```
 
-A widget object acts as a container for communication. To exchange values between JavaScript and Julia, we also need to add `Observable` objects to the widget. This can be done by passing the widget, and an identifier for the observable (as string) and a default value to the `Observable` constructor:
+A widget object acts as a container for communication (more details below). To exchange values between JavaScript and Julia, we also need to add `Observable` objects to the widget. This can be done by passing the widget, and an identifier for the observable (as string) and a default value to the `Observable` constructor:
 
 ```julia
 obs = Observable(w, "rand-value", 0.0)
@@ -300,11 +301,11 @@ You can get the value of `obs` with the syntax `obs[]`. You can set the value us
 on(f, obs)
 ```
 
-This will run `f` on every update to `obs`. More on using Observables for communication:
+This will run `f` on every update to `obs`.
 
 ### Sending values from JavaScript to Julia
 
-We will present a widget which communicates with Julia first and then explain its construction line-by-line. The following widget contains a button which sends a random number to Julia. We will print this number on the Julia side.
+Below is a widget which communicates with Julia. Let's run through its construction line-by-line. The following widget contains a button which sends a random number, generated in JavaScript, to Julia. We will print this number on the Julia side.
 
 ```julia
 function random_print_button()
@@ -325,9 +326,9 @@ function random_print_button()
 end
 ```
 
-`w` is a Widget object, it acts a scope or context for communication. every call to `random_print_button` will create a new widget and hence keep the updates contained within it. This allows there to be many instances of the same widget on a page.
+`w` is a Widget object, it acts a scope or context for communication. Every call to `random_print_button` will create a new widget and hence keep the updates contained within it. This allows there to be many instances of the same widget on a page.
 
-An `Observable` is a value that can change over time. `Observable(w, "rand-value", 0.0)` creates an observable by the name "rand-value" associated with widget `w`. `on(f, x)` setes up an event handler such that `f` is called with the value of `x` every time `x` is updated.
+An `Observable` is a value that can change over time. `Observable(w, "rand-value", 0.0)` creates an observable by the name "rand-value" associated with widget `w`. `on(f, x)` sets up an event handler such that `f` is called with the value of `x` every time `x` is updated.
 
 An observable can be updated using the `x[] = value` syntax on Julia. To update the observable from the JavaScript side, you can use the following syntax:
 
@@ -335,7 +336,7 @@ An observable can be updated using the `x[] = value` syntax on Julia. To update 
 @js $obs[] = Math.random()
 ```
 
-This will return a `JSExpr` which you can use anywhere WebIO expects JavaScript, such as a event handler. But an even handler should be a function so you would need to enclose this in a function: `@js () -> $obs[] = Math.random()`.
+This will return a `JSExpr` which you can use anywhere WebIO expects JavaScript, such as a event handler. But an event handler should be a function so you would need to enclose this in a function: `@js () -> $obs[] = Math.random()`.
 
 ```
   dom"button"(
@@ -343,7 +344,7 @@ This will return a `JSExpr` which you can use anywhere WebIO expects JavaScript,
     events=Dict("click"=>@js () -> $obs[] = Math.random()),
   )
 ```
-creates a button UI which updates the `obs` observable with `Math.random()` (executed on JS) on every click.
+creates a button UI which updates the `obs` observable with `Math.random()` (executed in JS) on every click.
 
 Notice the last expression actually _calls_ the widget `w` with the contents to display. This causes the contents to be _wrapped_ in `w`'s context. All uses of observables associated with `w` (e.g. `obs`) should be enclosed in the widget `w`.
 
@@ -376,7 +377,10 @@ w(
 )
 ```
 
-The javascript function passed to `onjs` gets 2 arguments: 1) the `Widget` object (`wid`) 2) The value of the update. Notice the use of `wid.dom.querySelector("#clock")`. `wid.dom` contains the rendered DOM of the widget. `querySelector("#<id>"` will look up the element which has the id `<id>`. `clock.textContent = val` will set the text contained in `clock`, the DOM element.
+The javascript function passed to `onjs` gets 2 arguments:
+
+1. the `Widget` object (`wid`)
+2. The value of the update. Notice the use of `wid.dom.querySelector("#clock")`. `wid.dom` contains the rendered DOM of the widget. `querySelector("#<id>"` will look up the element which has the id `<id>`. `clock.textContent = val` will set the text contained in `clock`, the DOM element.
 
 ## CommandSets
 
@@ -474,4 +478,3 @@ end
 4. Push an instance of the provider onto the provider stack using `WebIO.push_provider!(provider)`
 
 For an example, see how it's done for IJulia at [src/ijulia_setup.jl](https://github.com/shashi/WebIO.jl/blob/cc8294d0b46551d9c5ff1b31c3dca3a6cbbbcf43/src/ijulia_setup.jl) and [assets/ijulia_setup.js](https://github.com/shashi/WebIO.jl/blob/cc8294d0b46551d9c5ff1b31c3dca3a6cbbbcf43/assets/ijulia_setup.js).
-
