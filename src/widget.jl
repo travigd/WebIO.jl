@@ -147,7 +147,12 @@ function send(ctx::Widget, cmd, data)
       "command" => cmd,
       "data" => data,
     )
-    put!(ctx.outbox, command_data)
+    # println("pre put!")
+    # @show length(ctx.outbox.data) ctx.outbox.sz_max
+    if length(ctx.outbox.data) < ctx.outbox.sz_max
+      put!(ctx.outbox, command_data)
+    end
+    # println("post put!")
     nothing
 end
 

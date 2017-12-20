@@ -33,19 +33,37 @@ function create_socket(req)
     conn = WebSockConnection(sock)
 
     t = @async while isopen(sock)
-        data = read(sock)
+        try
+            data = read(sock)
 
-        msg = JSON.parse(String(data))
-        WebIO.dispatch(conn, msg)
+            msg = JSON.parse(String(data))
+            WebIO.dispatch(conn, msg)
+        catch err
+            if isa(err, WebSockets.WebSocketClosedError)
+                println("Caught WebSockets.WebSocketClosedError: $err")
+                break
+            else
+                @show typeof(err) err
+                rethrow(err)
+            end
+        end
     end
 
     wait(t)
 end
 
 function Base.send(p::WebSockConnection, data)
-    write(p.sock, sprint(io->JSON.print(io,data)))
+    @show isopen(p.sock)
+    if isopen(p.sock)
+        println("pre write to p.sock")
+        write(p.sock, sprint(io->JSON.print(io,data)))
+        println("post write to p.sock")
+    else
+        warn("attempting to write to closed connection in $(@__FILE__):59")
+    end
 end
 
+Base.isopen(p::WebSockConnection) = isopen(p.sock)
 
 function Mux.Response(o::Node)
     Mux.Response(

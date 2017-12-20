@@ -19,6 +19,8 @@ function log(c::AbstractConnection, msg, level="info", data=nothing)
     send(c, logmsg(msg, level, data))
 end
 
+Base.isopen(conn::AbstractConnection) = true
+
 function dispatch(conn::AbstractConnection, data)
     # first, check if the message is one of the administrative ones
     cmd = data["command"]
@@ -26,7 +28,7 @@ function dispatch(conn::AbstractConnection, data)
     if cmd == "_setup_context"
         if haskey(contexts, ctxid)
             ctx = contexts[ctxid]
-            @async while true
+            @async while isopen(conn)
                 msg = take!(ctx.outbox)
                 send(conn, msg)
             end
@@ -53,4 +55,3 @@ function dispatch(conn::AbstractConnection, data)
         dispatch(ctx, cmd, data["data"])
     end
 end
-
