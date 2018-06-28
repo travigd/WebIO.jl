@@ -1,5 +1,4 @@
-(function (IPython, $, WebIO) {
-
+function setup_jupyter_comm(proc_id) {
     function initComm(notebook)
     {
         var commManager = notebook.kernel.comm_manager;
@@ -8,11 +7,11 @@
         // to communicate.
         commManager.register_target("webio_comm",
             function (comm) {
-                WebIO.triggerConnected();
-                WebIO.sendCallback = function (msg) { comm.send(msg); }
+                WebIO.sendCallbacks[proc_id] = function (msg) { comm.send(msg); }
                 comm.on_msg(function (msg) {
                     WebIO.dispatch(msg.content.data);
                 });
+                WebIO.triggerConnected();
             }
         );
     }
@@ -30,5 +29,4 @@
             );
         }
     });
-
-})(IPython, jQuery, WebIO);
+}

@@ -106,13 +106,12 @@ function arrays_and_equal(arr1, arr2){
     return is_array(arr1) && is_array(arr2) && arrays_equal(arr1, arr2)
 }
 
-function makeScope(id, data, sendCallback, dom, handlers, observables)
+function makeScope(id, procId, data, dom, handlers, observables)
 {
     var scope = {
         type: "scope",
         id: id,
         data: data,
-        sendCallback: sendCallback,
         dom: dom,
         handlers: handlers || {},
         observables: observables || {},
@@ -185,7 +184,7 @@ function mount(target, data)
         target.removeChild(target.firstChild);
     }
 
-    var opts = {sendCallback: WebIO.sendCallback}
+    var opts = {}
     var node = createNode(opts, data, target);
 
     target.parentNode.replaceChild(node, target)
@@ -195,7 +194,7 @@ function mount(target, data)
 
 function send(scope, cmd, data)
 {
-    scope.sendCallback(message(scope, cmd, data));
+    WebIO.sendCallbacks[scope.data.instanceArgs.procId](message(scope, cmd, data));
 }
 
 function setval(ob, val, sync) {
@@ -248,25 +247,29 @@ function message(scope, cmd, data)
     }
 }
 
-var connected_callbacks=[];
-function onConnected(f) {
-    if (WebIO._connected) {
+var connected_callbacks={};
+var _connected = {};
+function onConnected(procId, f) {
+    if (_connected[procId]) {
         setTimeout(f, 0);
     } else {
-        connected_callbacks[connected_callbacks.length]=f;
+        var fs = connected_callbacks[procId]
+        if (fs) {
+            fs[fs.length]=f; // push
+        } else {
+            connected_callbacks[procId] = [f];
+        }
     }
 }
 
-function triggerConnected() {
-    for (var i=0,l=connected_callbacks.length; i<l; i++) {
-        connected_callbacks[i]()
+function triggerConnected(procId) {
+    if (connected_callbacks[procId]) {
+        for (var i=0,l=connected_callbacks[procId].length; i<l; i++) {
+            // TODO: delete the callbacks
+            connected_callbacks[procId][i]()
+        }
     }
-    WebIO._connected=true;
-}
-
-function sendNotSetUp()
-{
-    console.error("WebIO.sendCallback not set up")
+    _connected[procId]=true;
 }
 
 //unescape closing script tags which cause problems in html documents
@@ -303,7 +306,7 @@ function setInnerHtml(elm, html) {
   }
 }
 
-var WebIO = {
+var WebIOGlobal = {
     type: "WebIO",
 
     // For Base.show or a package to print an element.
@@ -328,7 +331,7 @@ var WebIO = {
     getval: getval,
 
     // given by Provider, to be called when JS needs to send a message to Julia
-    sendCallback: sendNotSetUp,
+    sendCallbacks: {},
 
     triggerConnected: triggerConnected,
 
@@ -341,10 +344,10 @@ var WebIO = {
     obsscopes: {}
 };
 
-if (window) {
-    window.WebIO = WebIO;
+if (window && typeof window.WebIO === "undefined") {
+    window.WebIO = WebIOGlobal;
 }
-module.exports = WebIO
+module.exports = WebIOGlobal
 
 
 /***/ }),
@@ -2918,9 +2921,10 @@ function createScope(options, data) {
     // var handlers = data.instanceArgs.handlers;
     var observables = data.instanceArgs.observables;
     var handlers = data.instanceArgs.handlers;
+    var procId = data.instanceArgs.procId;
 
-    var scope = WebIO.makeScope(data.instanceArgs.id, data,
-                             options.sendCallback, fragment, handlers, observables);
+    var scope = WebIO.makeScope(data.instanceArgs.id, procId, data,
+                             fragment, handlers, observables);
 
     if (data.instanceArgs.systemjs_options)
         SystemJS.config(data.instanceArgs.systemjs_options)
@@ -2936,7 +2940,7 @@ function createScope(options, data) {
     scope.promises.importsLoaded = depsPromise
 
     scope.promises.connected = new Promise(function (accept, reject) {
-        WebIO.onConnected(function () {
+        WebIO.onConnected(procId, function () {
             // internal message to notify julia
             WebIO.send(scope, "_setup_scope", {});
             accept(scope);

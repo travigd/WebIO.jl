@@ -42,8 +42,13 @@ function setup(provider::Symbol)
 end
 setup(provider::AbstractString) = setup(Symbol(provider))
 
+const julia_process_uid = Ref{String}("")
 Requires.@init begin
+    if julia_process_uid[] == ""
+        julia_process_uid[] = string(Base.Random.uuid4())
+    end
     push!(Observables.addhandler_callbacks, WebIO.setup_comm)
+
 end
 
 end # module

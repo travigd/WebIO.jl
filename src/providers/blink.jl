@@ -23,6 +23,7 @@ function Blink.body!(p::Page, x::Union{Node, Scope})
 
     loadjs!(p, bp)
     loadjs!(p, bs)
+    body!(p, """<script>setup_blink_comm('$(julia_process_uid[])')</script>""")
 
     conn = BlinkConnection(p)
     Blink.handle(p, "webio") do msg

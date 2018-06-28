@@ -230,6 +230,7 @@ function JSON.lower(x::Scope)
     end
     Dict(
         "id" => x.id,
+        "procId" => julia_process_uid[],
         "systemjs_options" => x.systemjs_options,
         "imports" => lowerdeps(x.imports),
         "handlers" => x.jshandlers,

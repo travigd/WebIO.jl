@@ -1,6 +1,6 @@
-(function (Blink) {
+function setup_blink_comm(procId) {
     if (Blink.sock) {
-        WebIO.sendCallback = function (msg) {
+        WebIO.sendCallbacks[procId] = function (msg) {
             Blink.msg("webio", msg);
         }
         WebIO.triggerConnected();
@@ -11,4 +11,4 @@
     Blink.handlers.webio = function (msg) {
         WebIO.dispatch(msg.data);
     };
-})(Blink);
+}

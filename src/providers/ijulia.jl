@@ -17,6 +17,7 @@ Base.isopen(c::IJuliaConnection) = haskey(IJulia.CommManager.comms, c.comm.id)
 WebIO.register_renderable(T::Type, ::Val{:ijulia}) = nothing
 
 function main()
+    id = julia_process_uid[] = string(Base.Random.uuid4())
     if !IJulia.inited
         # If IJulia has not been initialized and connected to Jupyter itself,
         # then we have no way to display anything in the notebook and no way
@@ -48,11 +49,12 @@ function main()
 
     display(HTML("""
       <script class='js-collapse-script'>
+        setup_jupyter_comm('$(julia_process_uid[])')
         \$('.js-collapse-script').parent('.output_subarea').css('padding', '0');
       </script>
     """))
 
-    comm = Comm(:webio_comm)
+    comm = Comm(:webio_comm, id)
     conn = IJuliaConnection(comm)
     comm.on_msg = function (msg)
         data = msg.content["data"]

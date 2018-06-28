@@ -41,7 +41,7 @@ function iframe(dom)
             }
 
             webio.onload = function () {
-                win.WebIO.sendCallback = parent.WebIO.sendCallback; // Share stuff
+                win.WebIO.sendCallbacks[$(julia_process_uid[])] = parent.WebIO.sendCallbacks[$(julia_process_uid[])]; // Share stuff
                 win.WebIO.scopes = parent.WebIO.scopes
                 win.WebIO.obsscopes = parent.WebIO.obsscopes
                 win.WebIO._connected = true

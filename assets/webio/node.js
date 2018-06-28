@@ -303,9 +303,10 @@ function createScope(options, data) {
     // var handlers = data.instanceArgs.handlers;
     var observables = data.instanceArgs.observables;
     var handlers = data.instanceArgs.handlers;
+    var procId = data.instanceArgs.procId;
 
-    var scope = WebIO.makeScope(data.instanceArgs.id, data,
-                             options.sendCallback, fragment, handlers, observables);
+    var scope = WebIO.makeScope(data.instanceArgs.id, procId, data,
+                             fragment, handlers, observables);
 
     if (data.instanceArgs.systemjs_options)
         SystemJS.config(data.instanceArgs.systemjs_options)
@@ -321,7 +322,7 @@ function createScope(options, data) {
     scope.promises.importsLoaded = depsPromise
 
     scope.promises.connected = new Promise(function (accept, reject) {
-        WebIO.onConnected(function () {
+        WebIO.onConnected(procId, function () {
             // internal message to notify julia
             WebIO.send(scope, "_setup_scope", {});
             accept(scope);

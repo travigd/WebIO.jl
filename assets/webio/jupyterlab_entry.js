@@ -14,13 +14,14 @@ define(['./index.js', '@jupyterlab/notebook'], function(WebIO, Notebook){
 
         function newKernel(kernel) {
             kernel.registerCommTarget('webio_comm', function (comm, commMsg) {
+                var procId = comm.commId; // we create the same UUID as the process id on Julia
                 if (commMsg.content.target_name !== 'webio_comm') {
                    return;
                 }
 
-                WebIO.triggerConnected()
+                WebIO.triggerConnected(procId)
 
-                WebIO.sendCallback = function (msg) {
+                WebIO.sendCallbacks[procId] = function (msg) {
                     comm.send(msg)
                 }
 
